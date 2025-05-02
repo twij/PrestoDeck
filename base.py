@@ -30,8 +30,6 @@ class BaseApp:
             self.display.set_pen(self.background_color)
             self.display.clear()
     
-    def write_text(self):
-    
     def toggle_leds(self, value):
         if value:
             self.presto.auto_ambient_leds(True)

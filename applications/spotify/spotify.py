@@ -8,7 +8,7 @@ import urequests as requests
 from touch import Button
 
 from applications.spotify.spotify_client import setup_wizard, Session, SpotifyWebApiClient, myip
-from common import BaseApp
+from base import BaseApp
 import secrets
 
 class State:
