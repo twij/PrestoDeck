@@ -21,9 +21,9 @@ def get_spotify_token(client_id, client_secret, redirect_uri):
     )
     auth.get_access_token(as_dict=False)
     token_info = cache_handler.get_cached_token()
-    if not token_info or not token_info.get('access_token'):
-        sys.exit("Error: Unable to get Spotify access token.")
-    return auth, token_info['access_token']
+    if not token_info or not token_info.get('refresh_token'):
+        sys.exit("Error: Unable to get Spotify refresh token.")
+    return auth, token_info['refresh_token']
 
 def choose_device(spotify):
     devices = spotify.devices().get("devices", [])
@@ -46,7 +46,7 @@ def main():
     device_id = choose_device(spotify)
     
     credentials = {
-        "access_token": token,
+        "refresh_token": token,
         "client_id": client_id,
         "client_secret": client_secret,
         "device_id": device_id,

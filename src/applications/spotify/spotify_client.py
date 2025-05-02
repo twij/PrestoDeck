@@ -88,6 +88,8 @@ class Session:
     def __init__(self, credentials):
         self.credentials = credentials
         self.device_id = credentials['device_id']
+        if 'access_token' not in credentials:
+            self._refresh_access_token()
 
     def get(self, url, **kwargs):
         def get_request():
@@ -231,28 +233,3 @@ def urlencode(query):
             v = quote_plus(str(value))
             li.append(k + '=' + v)
     return '&'.join(li)
-
-
-def refresh_token(authorization_code, redirect_uri, client_id, client_secret):
-    params = dict(
-        grant_type="authorization_code",
-        code=authorization_code,
-        redirect_uri=redirect_uri,
-        client_id=client_id,
-        client_secret=client_secret,
-    )
-
-    access_token_endpoint = "https://accounts.spotify.com/api/token"
-    response = requests.post(
-        access_token_endpoint,
-        headers={'Content-Type': 'application/x-www-form-urlencoded'},
-        data=urlencode(params),
-    )
-    tokens = response.json()
-    return dict(
-        access_token=tokens['access_token'],
-        refresh_token=tokens['refresh_token'],
-        client_id=client_id,
-        client_secret=client_secret,
-        device_id=None,
-    )
