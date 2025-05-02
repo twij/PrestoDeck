@@ -7,7 +7,7 @@ import urequests as requests
 
 from touch import Button
 
-from applications.spotify.spotify_client import setup_wizard, Session, SpotifyWebApiClient, myip
+from applications.spotify.spotify_client import Session, SpotifyWebApiClient
 from base import BaseApp
 import secrets
 
@@ -97,13 +97,13 @@ class Spotify(BaseApp):
     
     def get_spotify_client(self):
         if not hasattr(secrets, 'SPOTIFY_CREDENTIALS') or not secrets.SPOTIFY_CREDENTIALS:
-            self.clear(1)
-            self.display.set_pen(self.colors.WHITE)
-            self.display.text("Set up Spotify credentials:", 60, self.height - 80, scale=.9)
-            self.display.text("http://{myip}:8080/".format(myip=myip()), 85, self.height - 40, scale=.8)
-            self.presto.update()
-    
-            return setup_wizard()
+            while True:
+                self.clear(1)
+                self.display.set_pen(self.colors.WHITE)
+                self.display.text("Spotify credentials not found", 40, self.height - 80, scale=.9)
+                self.presto.update()
+                time.sleep(2)
+
         session = Session(secrets.SPOTIFY_CREDENTIALS)
         return SpotifyWebApiClient(session)
         
