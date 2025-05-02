@@ -1,6 +1,7 @@
 import sys
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from spotipy.cache_handler import MemoryCacheHandler
 
 def prompt_credentials():
     client_id = input("Enter Spotify Client ID: ").strip()
@@ -9,21 +10,23 @@ def prompt_credentials():
     return client_id, client_secret, redirect_uri
 
 def get_spotify_token(client_id, client_secret, redirect_uri):
+    cache_handler = MemoryCacheHandler()
     auth = SpotifyOAuth(
         scope='user-read-playback-state,user-modify-playback-state,user-read-recently-played',
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_uri,
-        open_browser=False
+        open_browser=False,
+        cache_handler = cache_handler
     )
-    token = auth.get_access_token(as_dict=False)
-    if not token:
-        sys.exit("Error: Unable to get Spotify token.")
-    return auth, token
+    auth.get_access_token(as_dict=False)
+    token_info = cache_handler.get_cached_token()
+    if not token_info or not token_info.get('access_token'):
+        sys.exit("Error: Unable to get Spotify access token.")
+    return auth, token_info['access_token']
 
 def choose_device(spotify):
     devices = spotify.devices().get("devices", [])
-    print(devices)
     if not devices:
         print("No active Spotify devices found.")
         return None
