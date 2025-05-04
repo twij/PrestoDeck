@@ -4,7 +4,7 @@ class Colors:
     def __init__(self, display):
         self.WHITE = display.create_pen(255, 250, 240)
         self.GRAY = display.create_pen(128, 128, 128)
-        self._BLACK = display.create_pen(1, 1, 1)
+        self._BLACK = display.create_pen(10, 10, 10)
         self.BLACK = display.create_pen(0, 0, 0)
 
 class BaseApp:

@@ -146,12 +146,17 @@ class Session:
         self._check_status_code(response)
         content_type = response.headers.get("content-type")
         if response.content and content_type and content_type.startswith("application/json"):
-            return response.json()
+            resp_json = response.json()
+            response.close()
+            return resp_json
+        response.close()
+        
 
     @staticmethod
     def _check_status_code(response):
         if response.status_code >= 400:
             error = Session._error_from_response(response)
+            response.close()
             raise SpotifyWebApiError(**error)
 
     @staticmethod
@@ -177,14 +182,24 @@ class Session:
             client_id=self.credentials['client_id'],
             client_secret=self.credentials['client_secret'],
         )
-        response = requests.post(
-            token_endpoint,
-            headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            data=urlencode(params),
-        )
-        self._check_status_code(response)
+        retries = 3
+        while retries:
+            try:
+                response = requests.post(
+                    token_endpoint,
+                    headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                    data=urlencode(params),
+                )
+                self._check_status_code(response)
+            except Exception as E:
+                retries -= 1
+                if retries:
+                    print("Failed to refresh access token, retrying")
+                else:
+                    print("Failed to refresh access token after 3 tries, giving up")
 
         tokens = response.json()
+        response.close()
         self.credentials['access_token'] = tokens['access_token']
         if 'refresh_token' in tokens:
             self.credentials['refresh_token'] = tokens['refresh_token']

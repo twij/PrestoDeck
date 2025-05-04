@@ -72,22 +72,20 @@ class Spotify(BaseApp):
 
         self.display.set_font("sans")
         self.display.set_layer(1)
-        self.display.set_pen(self.colors.WHITE)
-        self.display.set_thickness(2)
-        self.display.text("Connecting to WIFI", 90, self.height - 80, scale=1)
+        self.display_text("Connecting to WIFI", (90, self.height - 80), thickness=2)
         self.presto.update()
 
         self.presto.connect()
         while not self.presto.wifi.isconnected():
             self.clear(1)
-            self.display.set_pen(self.colors.WHITE)
-            self.display.text("Failed to connect to WIFI", 40, self.height - 80, scale=1)
-            self.presto.update()
-
+            self.display_text("Failed to connect to WIFI", (40, self.height - 80), thickness=2)
             time.sleep(2)
 
+        self.clear(1)
+        self.display_text("Instantiating Spotify Client", (35, self.height - 80), thickness=2)
         self.spotify_client = self.get_spotify_client()
         self.clear(1)
+        self.presto.update()
 
         # JPEG decoder
         self.j = jpegdec.JPEG(self.display)
@@ -95,6 +93,14 @@ class Spotify(BaseApp):
         self.state = State()
         self.setup_buttons()
     
+    def display_text(self, text, position, color=65535, scale=1, thickness=None):
+        if thickness:
+            self.display.set_thickness(2)
+        x,y = position
+        self.display.set_pen(color)
+        self.display.text(text, x, y, scale=scale)
+        self.presto.update()
+
     def get_spotify_client(self):
         if not hasattr(secrets, 'SPOTIFY_CREDENTIALS') or not secrets.SPOTIFY_CREDENTIALS:
             while True:
@@ -210,7 +216,7 @@ class Spotify(BaseApp):
             while self.touch.state:
                 self.touch.poll()
 
-            await asyncio.sleep_ms(0)
+            await asyncio.sleep_ms(1)
 
     def show_image(self, img, minimized=False):
         """Displays an album cover image on the screen."""
@@ -230,10 +236,13 @@ class Spotify(BaseApp):
         """Writes the track name and artists on the screen."""
         if self.state.current_track:
             self.display.set_thickness(3)
-                    
+
             track_name = self.state.current_track.get("name")
+            # strip non-ascii characters
+            track_name = ''.join(i if ord(i) < 128 else ' ' for i in track_name)
             if len(track_name) > 20:
                 track_name = track_name[:20] + " ..."
+            # shadow effect
             self.display.set_pen(self.colors._BLACK)
             self.display.text(track_name, 20, self.height - 137, scale=1.1)
             
@@ -241,9 +250,12 @@ class Spotify(BaseApp):
             self.display.text(track_name, 18, self.height - 140, scale=1.1)
             
             artists = ", ".join([artist.get("name") for artist in self.state.current_track.get("artists")])
+            # strip non-ascii characters
+            artists = ''.join(i if ord(i) < 128 else ' ' for i in artists)
             if len(artists) > 35:
                 artists = artists[:35] + " ..."
             self.display.set_thickness(2)
+            # shadow effect
             self.display.set_pen(self.colors._BLACK)
             self.display.text(artists, 20, self.height - 108, scale=0.7)
             
@@ -259,10 +271,11 @@ class Spotify(BaseApp):
             prev_track = self.state.current_track
             if not self.state.latest_fetch or time.time() - self.state.latest_fetch > INTERVAL:
                 self.state.latest_fetch = time.time()
-                prev_track = self.state.current_track
-                device_id, self.state.current_track, self.state.is_playing, self.state.shuffle, self.state.repeat = fetch_state(self.spotify_client)
-                if device_id:
-                    self.spotify_client.session.device_id = device_id
+                result = fetch_state(self.spotify_client)
+                if result:
+                    device_id, self.state.current_track, self.state.is_playing, self.state.shuffle, self.state.repeat = result
+                    if device_id:
+                        self.spotify_client.session.device_id = device_id
 
             await asyncio.sleep(0)
 
@@ -279,6 +292,7 @@ class Spotify(BaseApp):
                 self.write_track()
 
             self.presto.update()
+            gc.collect()
             await asyncio.sleep_ms(200)
 
 def fetch_state(spotify_client):
@@ -309,6 +323,9 @@ def fetch_state(spotify_client):
                 print("Got recently playing track: " + current_track.get("name"))
         except Exception as e:
             print("Failed to get recently played track:", e)
+
+    if not current_track:
+        return None
 
     return device_id, current_track, is_playing, shuffle, repeat
 
