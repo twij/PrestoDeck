@@ -28,6 +28,7 @@ git clone https://github.com/fatihak/PrestoDeck.git
 - In the Developer Dashboard, click "Create an App"
 - Give your app a Name and Description
 - For the Redirect URIs, enter`http://127.0.0.1:8080`
+- Tick the "Web API" box
 
 ## 4. Generate Spotify Credentials
 - Run the helper script to authenticate and generate your Spotify credentials:
