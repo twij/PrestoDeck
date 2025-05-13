@@ -11,7 +11,7 @@ PrestoDeck is a Spotify music controller for the Pimoroni Presto. It displays th
 
 ## Installation 
 
-Follow these steps to install and set up the project on your Presto:
+Follow these steps to install and set up the project on your Presto. You can also checkout [this YouTube demo/tutorial](https://youtu.be/iOz5XUVkFkY).
 
 ### 1. Install Thonny
 Download and install Thonny IDE, which you'll use to connect to your Presto and upload the code:

@@ -191,6 +191,7 @@ class Session:
                     data=urlencode(params),
                 )
                 self._check_status_code(response)
+                retries -= 1
             except Exception as E:
                 retries -= 1
                 if retries:

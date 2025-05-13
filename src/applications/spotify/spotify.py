@@ -18,10 +18,35 @@ class State:
         self.is_playing = False
         self.repeat = False
         self.shuffle = False
-        self.current_track = None
+        self.track = None
         self.show_controls = False
-        self.latest_fetch = None
         self.exit = False
+
+        self.latest_fetch = None
+    
+    def copy(self):
+        state = State()
+        state.toggle_leds = self.toggle_leds
+        state.is_playing = self.is_playing
+        state.repeat = self.repeat
+        state.shuffle = self.shuffle
+        state.show_controls = self.show_controls
+        state.exit = self.exit
+        state.track = {'id': self.track['id']} if self.track else None # only care about track id
+        return state
+    
+    def __eq__(self, other):
+        if not isinstance(other, State) or other is None:
+            return False
+        return (
+            self.toggle_leds == other.toggle_leds and
+            self.is_playing == other.is_playing and
+            self.repeat == other.repeat and
+            self.shuffle == other.shuffle and
+            self.show_controls == other.show_controls and
+            self.exit == other.exit and
+            (self.track or {}).get('id') == (other.track or {}).get('id')
+        )
 
 class ControlButton():
     """Represents a control button with an icon and touch area."""
@@ -234,10 +259,10 @@ class Spotify(BaseApp):
         
     def write_track(self):
         """Writes the track name and artists on the screen."""
-        if self.state.current_track:
+        if self.state.show_controls and self.state.track:
             self.display.set_thickness(3)
 
-            track_name = self.state.current_track.get("name")
+            track_name = self.state.track.get("name")
             # strip non-ascii characters
             track_name = ''.join(i if ord(i) < 128 else ' ' for i in track_name)
             if len(track_name) > 20:
@@ -249,7 +274,7 @@ class Spotify(BaseApp):
             self.display.set_pen(self.colors.WHITE)
             self.display.text(track_name, 18, self.height - 140, scale=1.1)
             
-            artists = ", ".join([artist.get("name") for artist in self.state.current_track.get("artists")])
+            artists = ", ".join([artist.get("name") for artist in self.state.track.get("artists")])
             # strip non-ascii characters
             artists = ''.join(i if ord(i) < 128 else ' ' for i in artists)
             if len(artists) > 35:
@@ -265,33 +290,35 @@ class Spotify(BaseApp):
     async def display_loop(self):
         """Periodically updates the display with the latest track info and controls."""
         INTERVAL = 10
+        prev_state = None
 
         while not self.state.exit:
             update_display = False
-            prev_track = self.state.current_track
             if not self.state.latest_fetch or time.time() - self.state.latest_fetch > INTERVAL:
                 self.state.latest_fetch = time.time()
                 result = fetch_state(self.spotify_client)
                 if result:
-                    device_id, self.state.current_track, self.state.is_playing, self.state.shuffle, self.state.repeat = result
+                    device_id, self.state.track, self.state.is_playing, self.state.shuffle, self.state.repeat = result
                     if device_id:
                         self.spotify_client.session.device_id = device_id
 
             await asyncio.sleep(0)
 
-            if not prev_track or prev_track.get("id") != self.state.current_track.get("id"):
-                img = get_album_cover(self.state.current_track)
+            if not prev_state or prev_state.track.get('id') != self.state.track.get("id"):
+                img = get_album_cover(self.state.track)
                 self.show_image(img)
 
             await asyncio.sleep(0)
 
-            self.clear(1)
-            if self.state.show_controls:
+            # update display if state changes
+            if prev_state != self.state:
+                self.clear(1)
                 for button in self.buttons:
                     button.draw(self.state)
                 self.write_track()
 
-            self.presto.update()
+                self.presto.update()
+                prev_state = self.state.copy()
             gc.collect()
             await asyncio.sleep_ms(200)
 
