@@ -1,5 +1,33 @@
 # PrestoDeck
 
+Added basic MPRIS for Linux support.
+
+To install server run:
+
+```bash
+cd server
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd ..
+cp .env.example .env
+```
+
+Then to run the server:
+
+```bash
+python ./server/mpris_server.py
+```
+
+Edit the .env file with your wifi creds and info the server gives you when running.
+
+Then copy the files to the PrestoDeck like usual along with the .env file.
+
+There are some server settings in `./server/config.py` like player priority. You can find your player name with `playerctl -l`.
+
+
+## Original readme
+
 <img src="./docs/presto.jpg" />
 
 PrestoDeck is a Spotify music controller for the Pimoroni Presto. It displays the album cover art, name, and artist of the currently playing track and provides basic controls for playback.

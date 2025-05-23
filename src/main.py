@@ -1,6 +1,8 @@
-
-
 if __name__ == "__main__":
-    from applications.spotify.spotify import launch
+    # Launch Spotify app
+    # from applications.spotify.spotify import launch
+    # launch()
+    
+    # Launch MPRIS app
+    from applications.mpris.mpris import launch
     launch()
-
