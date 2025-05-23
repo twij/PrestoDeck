@@ -80,36 +80,52 @@ class ControlsManager:
             button.enabled = state.show_controls
             button.icon = "light_on.png" if state.toggle_leds else "light_off.png"
 
+        def exit_app(app_instance):
+            app_instance.state.exit = True
 
-        def exit_app(self):
-            self.app.state.exit = True
+        def toggle_controls(app_instance):
+            app_instance.state.show_controls = not app_instance.state.show_controls
+            print(f"Controls toggled: {app_instance.state.show_controls}")
 
-        def toggle_controls(self):
-            self.app.state.show_controls = not self.app.state.show_controls
-            print(f"Controls toggled: {self.app.state.show_controls}")
-
-        def play_pause(self):
-            if self.app.state.is_playing:
-                self.app.mpris_client.pause()
+        def play_pause(app_instance):
+            """Toggle play/pause state."""
+            success = app_instance.mpris_client.play_pause()
+            
+            if success:
+                app_instance.state.force_refresh = True
+                app_instance.state.latest_fetch = 0
             else:
-                self.app.mpris_client.play()
-            self.app.state.is_playing = not self.app.state.is_playing
-            self.app.state.force_refresh = True
-            self.app.state.latest_fetch = 0
+                print("Failed to toggle play/pause state")
 
-        def next_track(self):
-            self.app.mpris_client.next()
-            self.app.state.force_refresh = True
-            self.app.state.latest_fetch = 0
+        def next_track(app_instance):
+            """Skip to the next track."""
+            success = app_instance.mpris_client.next()
+            
+            if success:
+                app_instance.state.force_refresh = True
+                app_instance.state.latest_fetch = 0
+            else:
+                print("Next track unavailable or failed")
+                app_instance.display.set_pen(65535)
+                app_instance.display.text("Next unavailable", 260, app_instance.height - 20, scale=0.7)
+                app_instance.presto.update()
 
-        def previous_track(self):
-            self.app.mpris_client.previous()
-            self.app.state.force_refresh = True
-            self.app.state.latest_fetch = 0
+        def previous_track(app_instance):
+            """Go back to the previous track."""
+            success = app_instance.mpris_client.previous()
+            
+            if success:
+                app_instance.state.force_refresh = True
+                app_instance.state.latest_fetch = 0
+            else:
+                print("Previous track unavailable")
+                app_instance.display.set_pen(65535)
+                app_instance.display.text("Previous unavailable", 40, app_instance.height - 20, scale=0.7)
+                app_instance.presto.update()
 
-        def toggle_lights(self):
-            self.app.toggle_leds(not self.app.state.toggle_leds)
-            self.app.state.toggle_leds = not self.app.state.toggle_leds
+        def toggle_lights(app_instance):
+            app_instance.toggle_leds(not app_instance.state.toggle_leds)
+            app_instance.state.toggle_leds = not app_instance.state.toggle_leds
 
         display_width = self.app.width
         display_height = self.app.height
@@ -161,7 +177,7 @@ class ControlsManager:
             state: Current application state
         """
         self.display.set_pen(0)
-        self.display.rectangle(0, self.display.height() - 150, self.display.width(), 150)
+        self.display.rectangle(0, self.app.height - 150, self.app.width, 150)
         
         for button in self.buttons:
             button.update(state, button)

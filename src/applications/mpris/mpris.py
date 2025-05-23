@@ -84,6 +84,13 @@ class MPRIS(BaseApp):
 
         return MPRISApiClient(secrets.MPRIS_SERVER_URL, api_token, self.state.strict_privacy)
 
+    def update(self):
+        """Process touch events and update UI."""
+        if self.controls.handle_touch(self.state):
+            self.update_ui()
+            return True
+        return False
+
     def run(self):
         """Starts the app's event loops."""
         loop = asyncio.get_event_loop()
@@ -161,6 +168,11 @@ class MPRIS(BaseApp):
                     print(f"Error fetching media info: {e}")
                     import sys
                     sys.print_exception(e)
+                    self.clear(1)
+                    self.display.set_pen(self.colors.RED)
+                    self.display.text("Connection error", 40, self.height - 80, scale=.9)
+                    self.display.text("Check server status", 40, self.height - 40, scale=.9)
+                    self.presto.update()
                     
                 if first_run:
                     self.state.show_controls = False

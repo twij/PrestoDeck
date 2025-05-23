@@ -1,12 +1,14 @@
 """API routes for the MPRIS server."""
 import json
 import hashlib
+import dbus
 from flask import jsonify, request
 from modules.auth import require_auth
 from modules.dbus_interface import (
     get_media_info, get_player_by_id, get_available_players, 
-    get_priority_sorted_players, current_player
+    get_priority_sorted_players
 )
+from config import current_player
 
 def register_routes(app):
     """Register API routes with the Flask app."""
@@ -50,11 +52,11 @@ def register_routes(app):
             priority_players = get_priority_sorted_players()
             if priority_players:
                 for player in priority_players:
-                    global current_player
                     current_player = player['id']
                     print(f"Trying priority player: {current_player}")
                     media_info = get_media_info()
                     if media_info:
+                        print(f"Successfully selected player: {current_player}")
                         break
         
         if media_info:
@@ -97,7 +99,16 @@ def register_routes(app):
     @require_auth
     def play():
         """API endpoint to send play command."""
+        global current_player
         try:
+            if not current_player:
+                priority_players = get_priority_sorted_players()
+                if priority_players:
+                    current_player = priority_players[0]['id']
+                    print(f"Auto-selected player: {current_player}")
+                else:
+                    return jsonify({"error": "No available players found"}), 404
+
             player_obj = get_player_by_id(current_player)
             if player_obj:
                 player_interface = dbus.Interface(player_obj, 'org.mpris.MediaPlayer2.Player')
@@ -111,7 +122,16 @@ def register_routes(app):
     @require_auth
     def pause():
         """API endpoint to send pause command."""
+        global current_player
         try:
+            if not current_player:
+                priority_players = get_priority_sorted_players()
+                if priority_players:
+                    current_player = priority_players[0]['id']
+                    print(f"Auto-selected player: {current_player}")
+                else:
+                    return jsonify({"error": "No available players found"}), 404
+
             player_obj = get_player_by_id(current_player)
             if player_obj:
                 player_interface = dbus.Interface(player_obj, 'org.mpris.MediaPlayer2.Player')
@@ -125,21 +145,47 @@ def register_routes(app):
     @require_auth
     def next_track():
         """API endpoint to send next track command."""
+        global current_player
         try:
+            if not current_player:
+                priority_players = get_priority_sorted_players()
+                if priority_players:
+                    current_player = priority_players[0]['id']
+                    print(f"Auto-selected player: {current_player}")
+                else:
+                    return jsonify({"error": "No available players found"}), 404
+
             player_obj = get_player_by_id(current_player)
             if player_obj:
                 player_interface = dbus.Interface(player_obj, 'org.mpris.MediaPlayer2.Player')
-                player_interface.Next()
-                return jsonify({"success": True})
+                print(f"Sending Next command to player: {current_player}")
+                try:
+                    player_interface.Next()
+                    return jsonify({"success": True})
+                except dbus.exceptions.DBusException as dbus_error:
+                    if "is not available now" in str(dbus_error):
+                        print(f"Next function not available for {current_player}: {dbus_error}")
+                        return jsonify({"error": "Next function not available", "details": str(dbus_error)}), 400
+                    raise
             return jsonify({"error": "No player selected"}), 400
         except Exception as e:
+            print(f"Error on next track: {e}")
             return jsonify({"error": str(e)}), 500
 
     @app.route('/previous', methods=['POST'])
     @require_auth
     def previous_track():
         """API endpoint to send previous track command."""
+        global current_player
         try:
+            if not current_player:
+                priority_players = get_priority_sorted_players()
+                if priority_players:
+                    current_player = priority_players[0]['id']
+                    print(f"Auto-selected player: {current_player}")
+                else:
+                    return jsonify({"error": "No available players found"}), 404
+
             player_obj = get_player_by_id(current_player)
             if player_obj:
                 player_interface = dbus.Interface(player_obj, 'org.mpris.MediaPlayer2.Player')
@@ -147,6 +193,40 @@ def register_routes(app):
                 return jsonify({"success": True})
             return jsonify({"error": "No player selected"}), 400
         except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route('/playpause', methods=['POST'])
+    @require_auth
+    def play_pause():
+        """API endpoint to toggle play/pause state."""
+        global current_player
+        try:
+            if not current_player:
+                priority_players = get_priority_sorted_players()
+                if priority_players:
+                    current_player = priority_players[0]['id']
+                    print(f"Auto-selected player: {current_player}")
+                else:
+                    return jsonify({"error": "No available players found"}), 404
+
+            player_obj = get_player_by_id(current_player)
+            if player_obj:
+                properties_interface = dbus.Interface(player_obj, 'org.freedesktop.DBus.Properties')
+                playback_status = properties_interface.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')
+                
+                player_interface = dbus.Interface(player_obj, 'org.mpris.MediaPlayer2.Player')
+
+                if playback_status == 'Playing':
+                    player_interface.Pause()
+                    print(f"Pausing player: {current_player}")
+                else:
+                    player_interface.Play()
+                    print(f"Playing player: {current_player}")
+                    
+                return jsonify({"success": True, "action": "pause" if playback_status == 'Playing' else "play"})
+            return jsonify({"error": "No player selected"}), 400
+        except Exception as e:
+            print(f"Error toggling playback: {e}")
             return jsonify({"error": str(e)}), 500
             
     return app

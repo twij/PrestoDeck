@@ -94,28 +94,49 @@ class MPRISApiClient:
         return self.client.make_request("players", force=force)
     
     def play(self):
-        """Send play command."""
-        res = self.client.make_request("play", method="POST")
-        self.client.last_check["current"] = 0
-        return res
-    
+        """Sends play command to server."""
+        try:
+            response = self.client.make_request('/play', 'POST')
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Play command failed: {e}")
+            return False
+
     def pause(self):
-        """Send pause command."""
-        res = self.client.make_request("pause", method="POST")
-        self.client.last_check["current"] = 0
-        return res
-    
+        """Sends pause command to server."""
+        try:
+            response = self.client.make_request('/pause', 'POST')
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Pause command failed: {e}")
+            return False
+
+    def play_pause(self):
+        """Toggles play/pause state."""
+        try:
+            result = self.client.make_request('/playpause', 'POST')
+            return result.get('success', False) if isinstance(result, dict) else False
+        except Exception as e:
+            print(f"PlayPause toggle failed: {e}")
+            return False
+
     def next(self):
-        """Send next track command."""
-        res = self.client.make_request("next", method="POST")
-        self.client.last_check["current"] = 0
-        return res
-    
+        """Sends next track command to server."""
+        try:
+            result = self.client.make_request('/next', 'POST')
+            return result.get('success', False) if isinstance(result, dict) else False
+        except Exception as e:
+            print(f"Next track command failed: {e}")
+            return False
+
     def previous(self):
-        """Send previous track command."""
-        res = self.client.make_request("previous", method="POST")
-        self.client.last_check["current"] = 0
-        return res
+        """Sends previous track command to server."""
+        try:
+            result = self.client.make_request('/previous', 'POST')
+            return result.get('success', False) if isinstance(result, dict) else False
+        except Exception as e:
+            print(f"Previous track command failed: {e}")
+            return False
     
     def select_player(self, player_id):
         """Send command to change the player."""
